@@ -7,3 +7,6 @@ faiss_index/
 
 .vscode/
 .idea/
+# Local documents and generated indexes
+data/
+faiss_index_v2/

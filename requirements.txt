@@ -1,27 +1,22 @@
-langchain
+# LangChain integrations
 langchain-community
 langchain-google-genai
 langchain-huggingface
 langchain-text-splitters
 
+# Vector database
 faiss-cpu
 
+# Retrieval and reranking
+rank-bm25
 sentence-transformers
-transformers
+
+# ML framework
 torch
 
-huggingface-hub
-
+# Environment configuration
 python-dotenv
 
+# Document loaders
 pypdf
 docx2txt
-python-docx
-
-unstructured
-markdown
-
-pandas
-openpyxl
-
-tqdm

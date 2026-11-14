@@ -1,89 +1,48 @@
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+import logging
 
-
-
-# loader = PyPDFLoader("data/Mahabharata Volume 1.pdf")
-
-documents = []
-
-for file in Path("data").iterdir():
-
-    if file.is_file():
-        docs = load_document(str(file))
-
-        documents.extend(docs)
-
-print("Loading PDF...")
-
-documents = loader.load()
-
-print("PDF Loaded")
-print("Pages:", len(documents))
-
-
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size = 1000,
-    chunk_overlap = 200
+from config import DATA_DIR, VECTOR_STORE_DIR, BATCH_SIZE
+from loaders.loader import load_documents
+from processing.chunker import split_documents
+from models.embedding import get_embedding_model
+from vector_store.faiss_db import (
+    create_vector_store,
+    save_vector_store,
 )
 
-chunks = text_splitter.split_documents(documents)
 
-print("Chunks Created")
-print("Total Chunks:", len(chunks))
-
-
-embedding_model = HuggingFaceEmbeddings(
-    model_name = "BAAI/bge-small-en-v1.5"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
 )
 
-# vectors = embedding_model.embed_documents(
-#     [chunk.page_content for chunk in chunks]
-# )
-
-batch_size = 100
-
-for i in range(0,len(chunks), batch_size):
-    batch = chunks[i:i+batch_size]
-
-    if i==0:
-
-        vector_store = FAISS.from_documents(
-    batch,
-    embedding_model
-)
-        
-    else:
-
-        vector_store.add_documents(batch)
-
-    print(f"Processed {min(i+batch_size,len(chunks))} / {len(chunks)} chunks")
-
-batch_number = (i//batch_size) +1
-
-vector_store.save_local("faiss_index")
-
-print("Done")
-
-# print(type(vector_store))
+logger = logging.getLogger(__name__)
 
 
-# print(type(vectors[0]))
-# print(len(vectors))
-# print(vectors[0])
+def main():
+    # 1. Load source documents
+    documents = load_documents(DATA_DIR)
+    logger.info("Loaded %d document pages/records", len(documents))
+
+    # 2. Split documents while retaining source metadata
+    chunks = split_documents(documents)
+    logger.info("Created %d chunks", len(chunks))
+
+    # 3. Initialize the embedding model
+    embedding_model = get_embedding_model()
+    logger.info("Embedding model initialized")
+
+    # 4. Create the searchable FAISS index
+    vector_store = create_vector_store(
+        chunks,
+        embedding_model,
+        batch_size=BATCH_SIZE,
+    )
+
+    # 5. Persist the index for later queries
+    save_vector_store(vector_store, VECTOR_STORE_DIR)
+
+    logger.info("Indexing completed successfully")
 
 
-# print(type(chunks[0]))
-# print(len(chunks))
-# print(chunks[0])
-
-# print(type(loader))
-# print(type(documents))
-# print(len(documents))
-
-# print(documents[4])
-# print(type(documents[0]))
-# # print(documents[0].page_content)
-# print(documents[0].metadata)
+if __name__ == "__main__":
+    main()
